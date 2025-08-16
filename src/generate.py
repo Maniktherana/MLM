@@ -18,14 +18,13 @@ image = (
 )
 
 
-@app.function(image=image, gpu=modal.gpu.L4(), volumes={"/vol": vol}, timeout=600)
-def generate_text(prompt: str = "Hello", max_new_tokens: int = 120):
+@app.function(image=image, gpu="L4", volumes={"/vol": vol}, timeout=600)
+def generate_text(prompt: str = "Hello"):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     _, _, FINAL_DIR, TOK_DIR = cfg.get_paths()
 
     print("===> Loading model...")
-    cfg_path = FINAL_DIR / "config.json"
-    model_cfg = json.loads(cfg_path.read_text())
+    model_cfg = json.loads((FINAL_DIR / "config.json").read_text())
 
     tok_path = FINAL_DIR / "tokenizer"
     if not tok_path.exists():
@@ -35,24 +34,29 @@ def generate_text(prompt: str = "Hello", max_new_tokens: int = 120):
     model = GPT(model_cfg)
     state = torch.load(FINAL_DIR / "model.pt", map_location="cpu")
     model.load_state_dict(state)
+    model.tie_weights()
     model.to(device).eval()
+    torch.set_grad_enabled(False)
 
     print(f"===> Generating for: '{prompt}'")
-    ids = tokenizer.encode(prompt, add_special_tokens=True)
-    x = torch.tensor(
-        [ids[-model_cfg["context_length"] :]], dtype=torch.long, device=device
-    )
+    ids = tokenizer.encode(prompt, add_special_tokens=False)
+    if tokenizer.bos_token_id is not None:
+        ids = [tokenizer.bos_token_id] + ids
+    ctx = model_cfg["context_length"]
+    x = torch.tensor([ids[-ctx:]], dtype=torch.long, device=device)
 
     out = generate(
         model=model,
         idx=x,
-        max_new_tokens=max_new_tokens,
-        context_size=model_cfg["context_length"],
-        top_k=25,
-        temperature=1.4,
+        max_new_tokens=200,
+        context_size=ctx,
+        temperature=0.8,
+        top_k=50,
+        eos_id=tokenizer.eos_token_id,
+        repetition_penalty=1.1,
     )
 
-    text = tokenizer.decode(out[0].tolist(), skip_special_tokens=True)
+    text = tokenizer.decode(out[0].tolist(), skip_special_tokens=False)
     print(text)
     return text
 

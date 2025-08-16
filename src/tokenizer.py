@@ -54,9 +54,13 @@ def ensure_tokenizer(
         vocab_size=vocab_size,
         new_special_tokens=["<pad>", "<bos>", "<eos>"],
     )
+
     tok.pad_token = "<pad>"
     tok.bos_token = "<bos>"
     tok.eos_token = "<eos>"
+
+    tok.add_bos_token = False
+    tok.add_eos_token = False
 
     TOK_DIR.mkdir(parents=True, exist_ok=True)
     tok.save_pretrained(TOK_DIR)

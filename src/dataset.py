@@ -9,24 +9,39 @@ class GPTDataset(Dataset):
         self.tok = tokenizer
         self.max_length = max_length
         self.pad_id = tokenizer.pad_token_id
+        self.eos_id = tokenizer.eos_token_id
+        self.bos_id = tokenizer.bos_token_id
         assert self.pad_id is not None, "pad_token_id must be set on the tokenizer"
+        assert self.eos_id is not None, "eos_token_id must be set on the tokenizer"
+        assert self.bos_id is not None, "bos_token_id must be set on the tokenizer"
 
     def __len__(self):
         return len(self.ds)
 
     def __getitem__(self, idx):
         text = self.ds[idx]["text"]
-        need = self.max_length + 1
+        T = self.max_length
+        need = T + 1
+
         ids = self.tok.encode(
             text,
-            add_special_tokens=True,
+            add_special_tokens=False,
             truncation=True,
-            max_length=need,  # avoids long-seq warnings
+            max_length=need - 2,
         )
-        if len(ids) < need:
-            ids += [self.pad_id] * (need - len(ids))
-        x = torch.tensor(ids[: self.max_length], dtype=torch.long)
-        y = torch.tensor(ids[1 : self.max_length + 1], dtype=torch.long)
+
+        seq = []
+
+        seq.append(self.tok.bos_token_id)
+        seq.extend(ids)
+        seq.append(self.eos_id)
+
+        # Pad to required length
+        if len(seq) < need:
+            seq += [self.pad_id] * (need - len(seq))
+
+        x = torch.tensor(seq[:T], dtype=torch.long)
+        y = torch.tensor(seq[1 : T + 1], dtype=torch.long)
         return x, y
 
 
