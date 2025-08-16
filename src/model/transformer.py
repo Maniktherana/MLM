@@ -105,7 +105,7 @@ def generate(
     finished = torch.zeros(B, dtype=torch.bool, device=device)
 
     for _ in range(max_new_tokens):
-        idx_cond = idx[:, -context_size:] 
+        idx_cond = idx[:, -context_size:]
         logits = model(idx_cond)[:, -1, :]
 
         if eos_id is not None:
@@ -121,8 +121,7 @@ def generate(
         logits = _top_k_filter(logits, top_k)
 
         probs = torch.softmax(logits, dim=-1)
-        next_ids = torch.multinomial(probs, num_samples=1)\
-
+        next_ids = torch.multinomial(probs, num_samples=1)
         if eos_id is not None:
             finished |= next_ids.squeeze(1) == eos_id
 

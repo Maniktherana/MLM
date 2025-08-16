@@ -84,10 +84,10 @@ def token_ids_to_text(token_ids, tokenizer, skip_special_tokens: bool = True):
 
 def generate_and_print_sample(model, tokenizer, device, start_context):
     model.eval()
-    
+
     context_size = model.pos_emb.weight.shape[0]
     encoded = text_to_token_ids(start_context, tokenizer, add_bos=True, device=device)
-    
+
     token_ids = generate_text_simple(
         model=model,
         idx=encoded,
@@ -95,12 +95,12 @@ def generate_and_print_sample(model, tokenizer, device, start_context):
         context_size=context_size,
         eos_id=tokenizer.eos_token_id,
     )
-    
+
     decoded_text = token_ids_to_text(token_ids, tokenizer, skip_special_tokens=False)
     print(decoded_text.replace("\n", " "))
     debug_text = token_ids_to_text(token_ids, tokenizer, skip_special_tokens=False)
     print(f"[debug] with specials: {debug_text[-120:]}")
-    
+
     model.train()
 
 
@@ -486,22 +486,6 @@ def download_model(local_path: str = "./"):
     else:
         print("No trained model found. Run training first!")
         return None
-
-
-@app.function(image=image, volumes={"/vol": vol})
-def list_saved_files():
-    ROOT, CKPT_DIR, FINAL_DIR, TOK_DIR = cfg.get_paths()
-
-    print(f"Contents of {FINAL_DIR}:")
-    if FINAL_DIR.exists():
-        for item in FINAL_DIR.rglob("*"):
-            if item.is_file():
-                size_mb = item.stat().st_size / (1024 * 1024)
-                print(f"===> {item.relative_to(FINAL_DIR)} ({size_mb:.2f} MB)")
-    else:
-        print("===> No files found. Run training first!")
-
-    return list(FINAL_DIR.rglob("*")) if FINAL_DIR.exists() else []
 
 
 if __name__ == "__main__":
